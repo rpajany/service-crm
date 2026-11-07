@@ -1,0 +1,10 @@
+import mongoose from "mongoose";
+const itemSchema = new mongoose.Schema({ description:{type:String,required:true,trim:true,maxlength:500}, serial_model:{type:String,trim:true,default:"",maxlength:200}, qty:{type:Number,required:true,min:0.001}, rate:{type:Number,required:true,min:0}, hsn_code:{type:String,trim:true,default:"",maxlength:30} },{_id:false});
+const schema = new mongoose.Schema({
+ companyid:{type:mongoose.Schema.Types.ObjectId,ref:"Company",required:true,index:true}, dc_number:{type:String,required:true,trim:true}, dc_date:{type:Date,required:true}, customer_id:{type:mongoose.Schema.Types.ObjectId,ref:"Customer",required:true},
+ company_snapshot:{name:String,email:String,phone:String,website:String,gstNumber:String,logoUrl:String,companySealUrl:String,address:{street:String,city:String,state:String,postalCode:String,country:String}},
+ customer_snapshot:{customer_code:String,customer_name:String,contact_person:String,address:String,city:String,state:String,pincode:String,country:String,gstin:String,mobile:String,email:String},
+ contact_person:{type:String,trim:true,default:"",maxlength:200}, dc_remarks:{type:String,enum:["For Sale","For Demo","For Service","Loaner","Others"],required:true}, dc_type:{type:String,enum:["Non-Returnable","Returnable"],default:"Non-Returnable"}, delivery_mode:{type:String,enum:["By Hand","Courier","Transport","Others"],required:true}, reference:{type:String,trim:true,default:"",maxlength:200}, items:{type:[itemSchema],required:true,validate:v=>v.length>0}, status:{type:String,enum:["Open","Cancelled"],default:"Open"}, created_by:{type:mongoose.Schema.Types.ObjectId,ref:"User"},updated_by:{type:mongoose.Schema.Types.ObjectId,ref:"User"},cancelled_by:{type:mongoose.Schema.Types.ObjectId,ref:"User"},cancelled_at:{type:Date,default:null}
+},{timestamps:true,strict:"throw"});
+schema.index({companyid:1,dc_number:1},{unique:true});schema.index({companyid:1,dc_date:-1});
+export default mongoose.models.DeliveryChallan||mongoose.model("DeliveryChallan",schema);

@@ -540,7 +540,26 @@ ${
       c.companySealUrl
         ? `<img src="${esc(c.companySealUrl)}" alt="Company seal">`
         : ""
-    }<div class="frontdesk-caption">Signature of Front Desk :</div></div><div class="signature">Signature of Customer :</div></div></footer></main><script>window.onload=()=>window.print();</script></body></html>`);
+    }<div class="frontdesk-caption">Signature of Front Desk :</div></div><div class="signature">Signature of Customer :</div></div></footer></main>
+    <script>
+    // window.onload=()=>window.print();
+    
+    window.onload=()=>{
+  const images = Array.from(w.document.images);
+
+  Promise.all(
+    images.map(img =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          })
+    )
+  ).then(() => w.print());
+};
+    </script>
+    </body></html>`);
     w.document.close();
   }
 

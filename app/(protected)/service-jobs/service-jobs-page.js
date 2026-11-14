@@ -41,18 +41,126 @@ export default function ServiceJobsPage() {
   const terms=(Array.isArray(rawTerms)?rawTerms:[]).map(x=>String(typeof x==='string'?x:(x?.value||x?.text||'')).trim()).filter(Boolean);
   const c=printMeta?.company||{};
   const products=(Array.isArray(job.products)&&job.products.length?job.products:[{product_type:job.product_type,sl_no:job.sl_no,brand:job.brand,model_name:job.model_name,model_number:job.model_number,status:job.status,problem_reported:job.problem_reported}]).slice(0,3);
+  
+
+// HP-specific print template.
+// This returns HTML fragments because the existing Service Job print
+// is generated in a separate browser window using window.document.write().
+function HP_PrintTemplet() {
+  // Keep the HP logo self-contained so no external image URL is required.
+  const hpLogo = `
+    <svg xmlns="http://www.w3.org/2000/svg"
+         width="48" height="42" viewBox="0 0 100 100"
+         role="img" aria-label="HP logo">
+      <circle cx="50" cy="50" r="47" fill="#0096D6"/>
+      <text x="50" y="68"
+            text-anchor="middle"
+            font-family="Arial, sans-serif"
+            font-size="58"
+            font-style="italic"
+            font-weight="bold"
+            fill="#ffffff">hp</text>
+    </svg>
+  `;
+
+  // These terms are transcribed from the supplied HP reference image.
+  const hpTerms = [
+    "The terms and conditions as contained in the product warranty statement or additional CarePAQ applicable to the particular model shall be applicable for the repairs relating to the same.",
+
+    "In case of units not covered under warranty, the customers shall fill-in the Quotation Acceptance form in token of acceptance of the quotation offered by HP.",
+
+    "HP India Sales Private Limited reserves the right to dispose off any equipment which is not claimed by the customer from the date of receipt of this CSO form/Quotation acceptance form in case of units not covered under warranty. In such an event, the customer acknowledges that he/she shall have no claim against HP in respect of such equipment, which is disposed off by HP. Further demurrage charges shall be applicable on the units @ Rs. 500/- per month if the machine is not collected from HP Care within 1 month from the date of receipt of this CSO form/Last Quotation."
+  ];
+
+  return {
+    logoHtml: hpLogo,
+
+    titleHtml: `
+      <div class="hp-report-title">
+        Customer Service Report
+      </div>
+    `,
+
+    termsTitleHtml: `
+      <div class="terms-title hp-terms-title">
+        UEFI Code : Terms and Conditions
+      </div>
+    `,
+
+    termsHtml: hpTerms.map(term => `<li>${esc(term)}</li>`).join("")
+  };
+}
+
+// Use the HP template if at least one product in this job has Brand exactly "HP".
+const isHpJob = products.some(
+  product => String(product.brand || "").trim() === "HP"
+);
+
+const hpTemplate = isHpJob ? HP_PrintTemplet() : null;
+
+// Keep the existing company logo for every non-HP brand.
+const reportLogoHtml = isHpJob
+  ? hpTemplate.logoHtml
+  : (c => c.logoUrl
+      ? `<img src="${esc(c.logoUrl)}" alt="Company logo">`
+      : '')(printMeta?.company || {});
+
+
   const money=(v)=>Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const serviceAmount=Number(job.estimated_cost||0),advance=Number(job.advance_received||0),balance=Math.max(0,serviceAmount-advance);
   const address=[c.address?.street,c.address?.city,c.address?.state,c.address?.postalCode,c.address?.country].filter(Boolean).join(', ');
   const contact=[c.phone,c.email,c.website].filter(Boolean).join(' | ');
   const w=window.open('','_blank','width=900,height=700');if(!w){toast('Please allow pop-ups to print the job report.','error');return;}
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Service Job ${esc(job.job_sheet_no)}</title><style>
-  @page{size:A4;margin:8mm}*{box-sizing:border-box}body{font:11px Arial,sans-serif;color:#111;margin:0}.paper{width:100%;} .company-head{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;border-bottom:1px solid #555;padding:0 0 7px;margin-bottom:5px;min-height:54px}.company-head img{width:48px;height:42px;object-fit:contain}.company-copy{flex:1}.company-copy h1{font-size:17px;margin:0 0 3px}.company-copy div{font-size:10px;line-height:1.35}.gst{font-weight:bold}.meta{display:grid;grid-template-columns:1fr 1fr;gap:16px;border-bottom:1px solid #777;padding:4px 0 8px;margin-bottom:12px;font-size:11px;line-height:1.55}.meta strong{font-size:12px}.meta-right{text-align:left}.section-title{font-weight:bold;font-size:12px;margin:0 0 4px}.products{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 12px}.products th,.products td{border:1.5px solid #111;padding:5px 3px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}.products th{font-size:9px;font-weight:bold}.products td{font-size:9px;height:25px}.products th:nth-child(1){width:19%}.products th:nth-child(2){width:10%}.products th:nth-child(3){width:9%}.products th:nth-child(4){width:10%}.products th:nth-child(5){width:13%}.products th:nth-child(6){width:19%}.products th:nth-child(7){width:20%}.amounts{font-size:11px;padding:2px 0 9px;border-bottom:1px solid #777;margin-bottom:9px;display:flex;gap:18px;flex-wrap:wrap}.terms-title{font-size:9px;font-weight:bold;margin:0 0 5px}.terms{font-size:7px;line-height:1.35;margin:0 0 8px;padding-left:17px}.terms li{margin:0 0 4px;break-inside:avoid}.footer{border-top:1px solid #777;margin-top:9px;padding-top:8px;min-height:74px}.footer-date{font-size:11px;margin-bottom:12px}.signatures{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-top:4px}.frontdesk-area{width:40%;text-align:left;display:flex;flex-direction:column;align-items:flex-start}.frontdesk-area img{max-width:90px;max-height:65px;object-fit:contain;display:block;margin:0 0 5px}.frontdesk-caption{font-size:9px}.signature{width:30%;border-top:1px solid #222;text-align:center;padding-top:5px;font-size:9px}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.products tr{break-inside:avoid}}
-  </style></head><body><main class="paper"><header class="company-head">${c.logoUrl?`<img src="${esc(c.logoUrl)}" alt="Company logo">`:''}<div class="company-copy"><h1>${esc(c.name||'')}</h1><div>${esc(address)}</div><div>${esc(contact)}</div>${c.gstNumber?`<div class="gst">GSTIN: ${esc(c.gstNumber)}</div>`:''}</div></header>
+  @page{size:A4;margin:8mm}*{box-sizing:border-box}body{font:11px Arial,sans-serif;color:#111;margin:0}.paper{width:100%;} .company-head{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;border-bottom:1px solid #555;padding:0 0 7px;margin-bottom:5px;min-height:54px}.company-head img{width:48px;height:42px;object-fit:contain}
+  
+/* HP-specific Customer Service Report heading */
+.hp-report-title {
+  background: #52657f;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: bold;
+  padding: 5px 10px;
+  width: 48%;
+  border-radius: 3px;
+  margin: 5px 0 8px;
+  text-align: left;
+}
+
+.hp-terms-title {
+  font-size: 9px;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+  .company-copy{flex:1}.company-copy h1{font-size:17px;margin:0 0 3px}.company-copy div{font-size:10px;line-height:1.35}.gst{font-weight:bold}.meta{display:grid;grid-template-columns:1fr 1fr;gap:16px;border-bottom:1px solid #777;padding:4px 0 8px;margin-bottom:12px;font-size:11px;line-height:1.55}.meta strong{font-size:12px}.meta-right{text-align:left}.section-title{font-weight:bold;font-size:12px;margin:0 0 4px}.products{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 12px}.products th,.products td{border:1.5px solid #111;padding:5px 3px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}.products th{font-size:9px;font-weight:bold}.products td{font-size:9px;height:25px}.products th:nth-child(1){width:19%}.products th:nth-child(2){width:10%}.products th:nth-child(3){width:9%}.products th:nth-child(4){width:10%}.products th:nth-child(5){width:13%}.products th:nth-child(6){width:19%}.products th:nth-child(7){width:20%}.amounts{font-size:11px;padding:2px 0 9px;border-bottom:1px solid #777;margin-bottom:9px;display:flex;gap:18px;flex-wrap:wrap}.terms-title{font-size:9px;font-weight:bold;margin:0 0 5px}.terms{font-size:7px;line-height:1.35;margin:0 0 8px;padding-left:17px}.terms li{margin:0 0 4px;break-inside:avoid}.footer{border-top:1px solid #777;margin-top:9px;padding-top:8px;min-height:74px}.footer-date{font-size:11px;margin-bottom:12px}.signatures{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-top:4px}.frontdesk-area{width:40%;text-align:left;display:flex;flex-direction:column;align-items:flex-start}.frontdesk-area img{max-width:90px;max-height:65px;object-fit:contain;display:block;margin:0 0 5px}.frontdesk-caption{font-size:9px}.signature{width:30%;border-top:1px solid #222;text-align:center;padding-top:5px;font-size:9px}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.products tr{break-inside:avoid}}
+  </style></head><body><main class="paper">
+<header class="company-head">
+  ${reportLogoHtml}
+  <div class="company-copy">
+    <h1>${esc(c.name || '')}</h1>
+<div>${esc(address)}</div><div>${esc(contact)}</div>${c.gstNumber?`<div class="gst">GSTIN: ${esc(c.gstNumber)}</div>`:''}</div></header>
+${hpTemplate ? hpTemplate.titleHtml : ''}
   <section class="meta"><div><strong>Customer Details :</strong><br>${esc(job.customer_name)}<br>${esc(job.address)}<br>${esc(job.mobile)}<br>${esc(job.email)}<br>${esc(job.gstin)}</div><div class="meta-right"><strong>Job Sheet No. : ${esc(job.job_sheet_no)}</strong><br><strong>Job Sheet Date :</strong> ${esc(date(job.job_date))}</div></section>
   <div class="section-title">Product Information :</div><table class="products"><thead><tr><th>Product</th><th>Sl No.</th><th>Brand</th><th>Model</th><th>Model No.</th><th>Product Status</th><th>Reported Fault</th></tr></thead><tbody>${products.map(p=>`<tr><td>${esc(p.product_type)}</td><td>${esc(p.sl_no)}</td><td>${esc(p.brand)}</td><td>${esc(p.model_name)}</td><td>${esc(p.model_number)}</td><td>${esc(p.status)}</td><td>${esc(p.problem_reported)}</td></tr>`).join('')}${products.length<1?'<tr><td colspan="7">&nbsp;</td></tr>':''}</tbody></table>
   <div class="amounts"><span>Service Amount : ${money(serviceAmount)}</span><span>Advance Paid : ${money(advance)}</span><strong>Balance : ${money(balance)}</strong></div>
-  <div class="terms-title">Terms and conditions :</div><ol class="terms">${terms.map(t=>`<li>${esc(t)}</li>`).join('')||'<li>Terms &amp; Conditions have not been configured in Service Job Settings.</li>'}</ol>
+  
+${hpTemplate
+  ? hpTemplate.termsTitleHtml
+  : '<div class="terms-title">Terms and conditions :</div>'
+}
+
+<ol class="terms">
+  ${
+    hpTemplate
+      ? hpTemplate.termsHtml
+      : (
+          terms.map(t => `<li>${esc(t)}</li>`).join('') ||
+          '<li>Terms &amp; Conditions have not been configured in Service Job Settings.</li>'
+        )
+  }
+</ol>
+
   <footer class="footer"><div class="footer-date">Date : ${date(new Date())}</div><div class="signatures"><div class="frontdesk-area">${c.companySealUrl?`<img src="${esc(c.companySealUrl)}" alt="Company seal">`:''}<div class="frontdesk-caption">Signature of Front Desk :</div></div><div class="signature">Signature of Customer :</div></div></footer></main><script>window.onload=()=>window.print();</script></body></html>`);w.document.close();
  }
 

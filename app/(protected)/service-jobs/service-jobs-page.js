@@ -545,7 +545,7 @@ ${
     // window.onload=()=>window.print();
     
     window.onload=()=>{
-  const images = Array.from(w.document.images);
+  const images = Array.from(window.document.images);
 
   Promise.all(
     images.map(img =>
@@ -556,7 +556,7 @@ ${
             img.onerror = resolve;
           })
     )
-  ).then(() => w.print());
+  ).then(() => window.print());
 };
     </script>
     </body></html>`);
